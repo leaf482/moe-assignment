@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marketplace Aggregator Prototype</title>
+    <script src="/config.js"></script>
+    <style>
+      :root {
+        color: #172033;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f5f7fb;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+      }
+      h1 {
+        margin-bottom: 4px;
+      }
+      .subtitle {
+        margin-top: 0;
+        color: #5d6b82;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(280px, 360px) 1fr;
+        gap: 20px;
+      }
+      section, article {
+        background: white;
+        border: 1px solid #dde4ef;
+        border-radius: 16px;
+        box-shadow: 0 8px 20px rgba(23, 32, 51, 0.06);
+      }
+      section {
+        padding: 20px;
+      }
+      label {
+        display: block;
+        font-weight: 700;
+        margin: 14px 0 6px;
+      }
+      input, textarea {
+        box-sizing: border-box;
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font: inherit;
+      }
+      textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+      button {
+        border: 0;
+        border-radius: 999px;
+        background: #2563eb;
+        color: white;
+        cursor: pointer;
+        font-weight: 700;
+        padding: 10px 16px;
+      }
+      button.secondary {
+        background: #eef2ff;
+        color: #1d4ed8;
+      }
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .listing {
+        margin-bottom: 14px;
+        padding: 18px;
+      }
+      .listing-header {
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+      }
+      .status {
+        align-self: flex-start;
+        border-radius: 999px;
+        background: #e0f2fe;
+        color: #0369a1;
+        font-size: 12px;
+        font-weight: 800;
+        padding: 5px 10px;
+        text-transform: uppercase;
+      }
+      .status.sold {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .status.publish_failed {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .muted {
+        color: #64748b;
+      }
+      .activity {
+        border-left: 3px solid #dbeafe;
+        margin-top: 12px;
+        padding-left: 12px;
+      }
+      .activity p {
+        margin: 8px 0 0;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .notice {
+        color: #475569;
+        min-height: 24px;
+      }
+      @media (max-width: 800px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Marketplace Aggregator</h1>
+      <p class="subtitle">Create a listing once, publish to a mocked eBay integration, and watch marketplace activity aggregate back.</p>
+      <div class="grid">
+        <section>
+          <h2>Create Listing</h2>
+          <form id="listing-form">
+            <label for="title">Title</label>
+            <input id="title" name="title" value="Vintage desk lamp" required />
+            <label for="description">Description</label>
+            <textarea id="description" name="description" required>Brass desk lamp in good condition.</textarea>
+            <label for="price">Price</label>
+            <input id="price" name="price" type="number" min="0.01" step="0.01" value="49.99" required />
+            <div style="margin-top: 18px">
+              <button type="submit">Create and Publish</button>
+            </div>
+          </form>
+          <p id="notice" class="notice"></p>
+        </section>
+        <section>
+          <div class="toolbar">
+            <h2>Listings</h2>
+            <button class="secondary" id="refresh" type="button">Refresh</button>
+          </div>
+          <div id="listings"></div>
+        </section>
+      </div>
+    </main>
+    <script>
+      const apiUrl = window.APP_CONFIG?.apiUrl ?? "/";
+      const form = document.querySelector("#listing-form");
+      const listingsEl = document.querySelector("#listings");
+      const noticeEl = document.querySelector("#notice");
+      const refreshButton = document.querySelector("#refresh");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const button = form.querySelector("button");
+        button.disabled = true;
+        notice("Creating listing...");
+        const data = Object.fromEntries(new FormData(form).entries());
+        data.price = Number(data.price);
+
+        try {
+          const response = await fetch(`${apiUrl}listings`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+          });
+          if (!response.ok) throw new Error(await response.text());
+          notice("Listing queued for publish. Refresh in a moment to see webhook activity.");
+          await loadListings();
+        } catch (error) {
+          notice(`Create failed: ${error.message}`);
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      refreshButton.addEventListener("click", loadListings);
+
+      async function loadListings() {
+        listingsEl.innerHTML = "<p class='muted'>Loading...</p>";
+        try {
+          const response = await fetch(`${apiUrl}listings`);
+          const payload = await response.json();
+          renderListings(payload.listings ?? []);
+        } catch (error) {
+          listingsEl.innerHTML = `<p class="muted">Could not load listings: ${escapeHtml(error.message)}</p>`;
+        }
+      }
+
+      function renderListings(listings) {
+        if (!listings.length) {
+          listingsEl.innerHTML = "<p class='muted'>No listings yet.</p>";
+          return;
+        }
+
+        listingsEl.innerHTML = listings.map((listing) => `
+          <article class="listing">
+            <div class="listing-header">
+              <div>
+                <h3>${escapeHtml(listing.title)}</h3>
+                <p class="muted">${escapeHtml(listing.description)}</p>
+                <p><strong>$${Number(listing.price).toFixed(2)}</strong> · ${escapeHtml(listing.marketplaceListingId ?? "not assigned yet")}</p>
+              </div>
+              <span class="status ${escapeHtml(listing.status)}">${escapeHtml(listing.status)}</span>
+            </div>
+            <div class="actions">
+              <button class="secondary" onclick="triggerEvent('${listing.listingId}', 'item_sold')">Trigger Sold</button>
+              <button class="secondary" onclick="triggerEvent('${listing.listingId}', 'new_comment')">Trigger Comment</button>
+            </div>
+            <div class="activity">
+              ${(listing.activities ?? []).map((activity) => `
+                <p><strong>${escapeHtml(activity.type)}</strong>: ${escapeHtml(activity.message)}<br><span class="muted">${escapeHtml(activity.createdAt)}</span></p>
+              `).join("") || "<p class='muted'>No activity yet.</p>"}
+            </div>
+          </article>
+        `).join("");
+      }
+
+      async function triggerEvent(listingId, type) {
+        notice(`Triggering ${type}...`);
+        const response = await fetch(`${apiUrl}mock-marketplace/events`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ listingId, type })
+        });
+        if (!response.ok) {
+          notice(`Mock event failed: ${await response.text()}`);
+          return;
+        }
+        notice(`${type} event delivered.`);
+        await loadListings();
+      }
+
+      function notice(message) {
+        noticeEl.textContent = message;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      loadListings();
+      setInterval(loadListings, 10000);
+    </script>
+  </body>
+</html>

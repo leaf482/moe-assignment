@@ -1,0 +1,41 @@
+{
+  "name": "moe-assignment",
+  "version": "1.0.0",
+  "description": "Marketplace aggregator prototype for the MOE senior engineer assignment.",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc --noEmit && npm run build:web",
+    "build:web": "node scripts/build-web.mjs",
+    "cdk": "cdk",
+    "deploy": "npm run build && cdk deploy --all --require-approval never",
+    "destroy": "cdk destroy --all --force",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leaf482/moe-assignment.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/leaf482/moe-assignment/issues"
+  },
+  "homepage": "https://github.com/leaf482/moe-assignment#readme",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1036.0",
+    "@aws-sdk/client-sqs": "^3.1036.0",
+    "@aws-sdk/lib-dynamodb": "^3.1036.0",
+    "aws-cdk-lib": "^2.250.0",
+    "constructs": "^10.6.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.161",
+    "@types/node": "^25.6.0",
+    "aws-cdk": "^2.1119.0",
+    "esbuild": "^0.28.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}
