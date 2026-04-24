@@ -3,3 +3,4 @@ cdk.out
 dist
 .env
 .DS_Store
+market-key.pem
