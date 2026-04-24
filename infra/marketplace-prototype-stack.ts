@@ -138,9 +138,10 @@ export class MarketplacePrototypeStack extends cdk.Stack {
       }
     });
 
-    publisher.addEnvironment("MOCK_MARKETPLACE_URL", `${api.url}mock-marketplace/publish`);
-    mockPublish.addEnvironment("WEBHOOK_URL", `${api.url}webhooks/marketplace`);
-    mockEvents.addEnvironment("WEBHOOK_URL", `${api.url}webhooks/marketplace`);
+    const apiBaseUrl = `https://${api.restApiId}.execute-api.${this.region}.${this.urlSuffix}/prod/`;
+    publisher.addEnvironment("MOCK_MARKETPLACE_URL", `${apiBaseUrl}mock-marketplace/publish`);
+    mockPublish.addEnvironment("WEBHOOK_URL", `${apiBaseUrl}webhooks/marketplace`);
+    mockEvents.addEnvironment("WEBHOOK_URL", `${apiBaseUrl}webhooks/marketplace`);
 
     const listings = api.root.addResource("listings");
     listings.addMethod("POST", new apigateway.LambdaIntegration(createListing));

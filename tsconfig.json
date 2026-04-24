@@ -10,6 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "types": ["node", "aws-lambda"],
+    "rootDir": ".",
     "outDir": "dist"
   },
   "include": ["bin/**/*.ts", "infra/**/*.ts", "src/**/*.ts"]
