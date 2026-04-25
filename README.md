@@ -99,7 +99,7 @@ The stack uses `RemovalPolicy.DESTROY` for prototype data stores and auto-delete
 
 ## Estimated Cost Per Day
 
-The runtime stack is serverless: CloudFront, S3, API Gateway, Lambda, DynamoDB on-demand, SQS, and CloudWatch Logs. For light evaluation traffic, the deployed stack should usually stay below `$0.25/day`, and will often be only a few cents/day.
+The runtime stack is serverless: CloudFront, S3, API Gateway, Lambda, DynamoDB on-demand, SQS, and CloudWatch Logs. There is no NAT Gateway, Elastic IP, always-on application server, or provisioned database. CloudWatch log retention is set to 7 days. For light evaluation traffic, the deployed stack should usually stay below `$0.25/day`, and will often be only a few cents/day.
 
 Approximate daily cost drivers:
 
@@ -108,8 +108,8 @@ Approximate daily cost drivers:
 - Lambda: near zero at prototype traffic
 - DynamoDB on-demand: cents for small read/write volume
 - SQS + DLQ: near zero
-- CloudWatch Logs: cents, depending on log volume and retention
+- CloudWatch Logs: cents, with 7-day retention configured for the prototype
 
 At the assignment scale of roughly 10 sellers, 1k listings, and 10k events/month, this should remain low single-digit dollars/month. The first cost wall is likely API Gateway request volume, CloudWatch log ingestion/retention, or DynamoDB access patterns if a seller/listing becomes hot.
 
-The EC2 instance used to deploy is not part of the runtime. If stopped, compute charges stop, but its 20 GiB EBS root volume costs roughly `$0.05/day` while retained. Delete the deployment stack and terminate the EC2 instance when the evaluation is complete.
+The EC2 instance used to deploy is not part of the runtime. The deployment host used here was a `t3.micro` with a 20 GiB EBS root volume and no Elastic IP. If stopped, compute charges stop, but the EBS root volume costs roughly `$0.05/day` while retained. Delete the deployment stack and terminate the EC2 instance when the evaluation is complete.
